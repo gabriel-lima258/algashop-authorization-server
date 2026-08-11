@@ -1,12 +1,8 @@
-server.port: 8081
+# 9000, nao 8081: a 8081 e do algashop-ordering, e os dois nao sobem juntos. 9000 e
+# tambem a porta convencional do Spring Authorization Server - e a que os exemplos do
+# openapi/authorization-server.yml ja usavam.
+server.port: 9000
 
 spring:
   application:
     name: authorization-server
-  jpa:
-    hibernate:
-      ddl-auto: none
-    show-sql: false
-  flyway:
-    enabled: false
-    locations: classpath:db/migration

@@ -1,3 +1,10 @@
+# Mesma estrutura de grupos dos outros quatro servicos: um perfil ativo que expande
+# numa lista de arquivos, em vez de repetir configuracao.
+#
+# Repare que 'docker' herda development-env e 'production' NAO. Aqui isso pesa mais que
+# nos outros servicos: os clientes OAuth2 estao declarados em application-development-env,
+# entao no perfil production o servidor sobe SEM CLIENTE NENHUM e recusa todo mundo com
+# invalid_client. Os arquivos docker-env e production-env estao vazios hoje.
 spring:
   profiles:
     active: development

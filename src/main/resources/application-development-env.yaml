@@ -1,0 +1,45 @@
+# Clientes registrados no authorization server.
+#
+# O Spring Authorization Server le tudo abaixo de spring.security.oauth2.authorizationserver.client
+# e monta um RegisteredClientRepository EM MEMORIA. Nao existe tabela, nao existe cadastro
+# por API: quem entra aqui existe, quem sai daqui deixa de existir na proxima subida.
+
+# - client_credentials: fluxo de maquina para maquina. Nao ha usuario
+# - client-authentication-methods: Como o cliente prova quem e: client_secret_basic manda client-id e segredo no header
+# - client_secret: O prefixo {noop} e do PasswordEncoder: significa "sem hash, texto puro".
+# Em producao seria {bcrypt} e viria de fora do arquivo.
+# - scopes: sao o teto do que este token pode fazer - e nada alem disso. Este
+# cliente e o de teste manual, entao carrega leitura e escrita.
+
+spring:
+  security:
+    oauth2:
+      authorizationserver:
+        client:
+          algashop-test-client:
+            registration:
+              client-id: algashop-test
+              authorization-grant-types:
+                - client_credentials
+              client-authentication-methods:
+                - client_secret_basic
+              client_secret: "{noop}testing123"
+              scopes:
+                - products:read
+                - products:write
+            token:
+              access-token-time-to-live: 15m # tempo de expiração token
+              access-token-format: reference # Opaco token
+          algashop-ordering-service-client:
+            registration:
+              client-id: algashop-ordering-service
+              authorization-grant-types:
+                - client_credentials
+              client-authentication-methods:
+                - client_secret_basic
+              client_secret: "{noop}secret123"
+              scopes:
+                - products:read
+            token:
+              access-token-time-to-live: 5m
+              access-token-format: self-contained # JWT token
