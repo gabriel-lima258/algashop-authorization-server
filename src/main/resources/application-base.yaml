@@ -1,0 +1,12 @@
+server.port: 8081
+
+spring:
+  application:
+    name: authorization-server
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
