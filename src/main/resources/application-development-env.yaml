@@ -15,6 +15,7 @@ spring:
   security:
     oauth2:
       authorizationserver:
+        issuer: http://algashop-authorization-server:9000 # validando url de acesso entre auth -> resource server
         client:
           algashop-test-client:
             registration:
@@ -24,12 +25,29 @@ spring:
               client-authentication-methods:
                 - client_secret_basic
               client_secret: "{noop}testing123"
-              scopes:
+              scopes: # granulização de scopes (permissão de acesso ao sistema)
                 - products:read
                 - products:write
+                - products:stock:write
+                - categories:read
+                - categories:write
+                - invoices:read
+                - invoices:write
+                - credit-cards:read
+                - credit-cards:write
+                - orders:read
+                - orders:write
+                - customers:read
+                - customers:write
+                - shopping-carts:read
+                - shopping-carts:write
+                - shipping-costs:preview
             token:
               access-token-time-to-live: 15m # tempo de expiração token
-              access-token-format: reference # Opaco token
+              # Era 'reference' (opaco) e virou JWT na Fase 21: os resource servers foram
+              # configurados com .jwt(), que so sabe validar token auto-contido. Token opaco
+              # exigiria introspeccao, que nenhum deles faz.
+              access-token-format: self-contained
           algashop-ordering-service-client:
             registration:
               client-id: algashop-ordering-service
@@ -42,4 +60,4 @@ spring:
                 - products:read
             token:
               access-token-time-to-live: 5m
-              access-token-format: self-contained # JWT token
+              access-token-format: self-contained # JWT, validado localmente pela chave publica
