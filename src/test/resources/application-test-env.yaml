@@ -1,0 +1,16 @@
+# Conexao NAO se declara aqui: o @ServiceConnection do TestContainerPostgresSQLConfig
+# injeta url, usuario e senha do container efemero.
+#
+# As tres linhas abaixo existem para DESFAZER o que o development-env declara. O Flyway
+# do Spring Boot usa spring.flyway.url quando ela existe, e so cai no datasource quando
+# nao existe - e o development-env aponta para localhost:5433/authorization_server, o
+# banco de DESENVOLVIMENTO. Sem anular aqui, rodar a suite migraria o banco real: os
+# testes usariam o Postgres do container e o Flyway mexeria em outro lugar.
+#
+# Anular com valor vazio (nao com "" nem com uma url falsa) e o que faz o Boot tratar a
+# propriedade como ausente e o Flyway herdar o datasource do container.
+spring:
+  flyway:
+    url:
+    user:
+    password:

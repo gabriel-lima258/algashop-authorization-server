@@ -1,0 +1,16 @@
+# Este arquivo SOMBREIA o application.yaml de src/main/resources: em teste o classpath
+# de teste vem primeiro. Existe so para ativar o perfil 'test', que os outros perfis
+# nao conhecem.
+#
+# O grupo inclui development-env de proposito. Assim o contextLoads valida tambem o
+# YAML dos quatro clientes registrados - se alguem escrever um grant type invalido ou
+# errar um redirect-uri, o teste acusa. O test-env, carregado depois, sobrescreve o que
+# nao pode valer em teste.
+spring:
+  profiles:
+    active: test
+    group:
+      test:
+        - base
+        - development-env
+        - test-env

@@ -12,7 +12,28 @@
 # cliente e o de teste manual, entao carrega leitura e escrita.
 
 spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/authorization_server
+    username: postgres
+    password: postgres
+  jpa:
+    show-sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration,classpath:db/testdata
+    user: postgres
+    password: postgres
+    url: jdbc:postgresql://localhost:5433/authorization_server
   security:
+    # Usuario unico e em memoria, so para o fluxo com pessoa existir. O authorization_code
+    # precisa de alguem para autenticar, e ainda nao ha cadastro de usuario nenhum - este
+    # e o placeholder ate haver um UserDetailsService de verdade.
+    #
+    # A senha vai em texto puro: o Boot prefixa {noop} sozinho quando o valor nao traz
+    # algoritmo. Serve para estudar e nao sobrevive a nada alem disso.
+    user:
+      name: customer@gmail.com
+      password: secret123
     oauth2:
       authorizationserver:
         issuer: http://algashop-authorization-server:9000 # validando url de acesso entre auth -> resource server
@@ -61,3 +82,80 @@ spring:
             token:
               access-token-time-to-live: 5m
               access-token-format: self-contained # JWT, validado localmente pela chave publica
+          # O CLIENT WEB - o primeiro do projeto com usuario de verdade no fluxo.
+          #
+          # A diferenca para os dois de cima nao e de configuracao, e de pergunta: os
+          # anteriores respondem "este SERVICO pode ler produto"; este responde "esta
+          # PESSOA autorizou este aplicativo a agir por ela". Por isso ele tem tela de
+          # login, tela de consentimento, e refresh token.
+          algashop-ecommerce-web-client: # client web, exige autenticação de usuário
+            registration:
+              client-id: algashop-ecommerce-web
+              client_secret: "{noop}ecommerce123"
+              client-name: Algashop Ecommerce
+              authorization-grant-types:
+                - authorization_code
+                - refresh_token # habilita o refresh
+              client-authentication-methods:
+                - client_secret_basic
+              redirect-uris:
+                - http://algashop-ecommerce:9080/login/oauth2/code/algashop-ecommerce-web
+              scopes:
+                - credit-cards:read
+                - credit-cards:write
+                - orders:read
+                - orders:write
+                - customers:read
+                - customers:write
+                - shopping-carts:read
+                - shopping-carts:write
+            # Faz o servidor perguntar ao usuario, em tela, o que ele libera - e gravar a
+            # resposta. Sem isto o consentimento e implicito: autenticou, autorizou tudo.
+            require-authorization-consent: true
+            # PKCE DESLIGADO. O OAuth 2.1 o tornou obrigatorio para authorization_code,
+            # inclusive em client confidencial - e o documento de fundamentos deste
+            # projeto afirma isso. Fica assim por enquanto porque simplifica o teste
+            # manual (nao e preciso gerar code_verifier/code_challenge na mao); esta
+            # registrado como pendencia, nao como decisao final.
+            require-proof-key: false
+            token:
+              # Tres prazos, tres papeis diferentes:
+              #   codigo  10m - uso unico e imediato; e so um comprovante de troca
+              #   access   5m - o que circula em toda requisicao; curto porque nao revoga
+              #   refresh  1h - a duracao da SESSAO da pessoa
+              access-token-time-to-live: 5m
+              authorization-code-time-to-live: 10m
+              refresh-token-time-to-live: 1h
+              # Rotacao: cada uso do refresh emite um novo e invalida o anterior. Se um
+              # refresh vazar, o uso pelo atacante ou pelo dono derruba o do outro, e a
+              # anomalia fica detectavel.
+              #
+              # ATENCAO ao PLURAL: a propriedade e reuse-refresh-tokenS. No singular ela e
+              # ignorada em silencio e vale o default do Spring, que e REUSAR. Verificado
+              # com o singular: renovar devolvia o MESMO refresh e o antigo continuava
+              # valendo - o oposto do que a configuracao dizia fazer.
+              reuse-refresh-tokens: false
+          # O par do web: o que a loja precisa fazer SEM ninguem logado - listar produto,
+          # listar categoria - e o cadastro inicial do cliente (customers:write), que
+          # acontece antes de existir usuario para autenticar.
+          algashop-ecommerce-m2m-client: # cliente publica, para exibir produtos e categorias sem autenticação de user
+            registration:
+              client-id: algashop-ecommerce-m2m
+              authorization-grant-types:
+                - client_credentials
+              client-authentication-methods:
+                - client_secret_basic
+              client_secret: "{noop}m2m123"
+              scopes: # granulização de scopes (permissão de acesso ao sistema)
+                - products:read
+                - categories:read
+                - customers:write
+            token:
+              access-token-time-to-live: 15m
+
+# TRACE no Spring Security registra o passo a passo da autenticacao - inclusive
+# credenciais e tokens. E o melhor jeito de entender o fluxo, e nao pode chegar a
+# ambiente nenhum alem deste.
+logging:
+  level:
+    org.springframework.security: TRACE

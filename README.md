@@ -1,12 +1,12 @@
 # algashop-authorization-server
 
-Quem **emite** as credenciais do AlgaShop. O único serviço sem domínio de negócio — sem banco, sem entidade, e quase sem código.
+Quem **emite** as credenciais do AlgaShop. O único serviço sem domínio de negócio — sem entidade e com pouquíssimo código, mas com banco: tokens e consentimentos precisam sobreviver a um deploy.
 
 ---
 
 ## O problema
 
-Dezenove fases construíram um sistema que não sabe quem está do outro lado. A questão não é "como cada serviço valida senha" — é o contrário disso:
+Dezenove fases construíram um sistema que não sabia quem estava do outro lado. A questão não é "como cada serviço valida senha" — é o contrário disso:
 
 > **Emitir credencial e verificar credencial são responsabilidades diferentes.** Quem verifica nunca vê a senha, e na maioria dos casos nem precisa falar com quem emitiu.
 
@@ -22,7 +22,7 @@ Concentrar a emissão num serviço significa que o segredo mora num lugar só, q
 | **Spring Boot** | 4.0.3 |
 | **Protocolo** | OAuth 2.1 (Spring Authorization Server) |
 | **Porta** | 9000 |
-| **Banco** | nenhum — clientes em memória |
+| **Banco** | PostgreSQL — tokens e consentimentos (clientes seguem em YAML) |
 | **Pacote raiz** | `com.algaworks.algashop.authorizationserver` |
 
 ```gradle
@@ -35,23 +35,32 @@ Uma dependência e uma `@SpringBootApplication` vazia produzem **seis endpoints*
 
 ---
 
-## Os dois clientes
+## Os quatro clientes
 
-Declarados em `application-development-env.yaml`, e escolhidos para tornar visível a decisão mais consequente do desenho — **o formato do token**:
+Todos em `application-development-env.yaml`, divididos por **quem está no fluxo**.
+
+### Com usuário — `authorization_code`
+
+| | `algashop-ecommerce-web` | `algashop-ecommerce-m2m` |
+|---|---|---|
+| Grant | `authorization_code` + `refresh_token` | `client_credentials` |
+| Consentimento | **exigido**, granular por escopo | não se aplica |
+| TTLs | código 10m · access 5m · refresh **1h** | access 15m |
+| Rotação de refresh | sim (`reuse-refresh-tokens: false`) | — |
+
+O primeiro é o único do projeto com **pessoa** no fluxo: tela de login, tela de consentimento, refresh token. O segundo é o par dele — o que a loja faz sem ninguém logado (listar produto e categoria) mais o cadastro inicial do cliente.
+
+> ⚠️ **PKCE está desligado** (`require-proof-key: false`) no client web. O OAuth 2.1 o tornou obrigatório; está registrado como pendência.
+
+### Sem usuário — `client_credentials`
 
 | | `algashop-test` | `algashop-ordering-service` |
 |---|---|---|
-| Para que existe | teste manual | o `ordering` lendo o catálogo |
-| Grant | `client_credentials` | `client_credentials` |
-| Escopos | `products:read`, `products:write` | `products:read` |
-| TTL | 15 min | **5 min** |
-| Formato | `reference` (**opaco**) | `self-contained` (**JWT**) |
+| Para que existe | teste manual por `curl` | o `ordering` lendo o catálogo |
+| Escopos | os 16 do sistema | **`products:read`** |
+| TTL | 15 min | 5 min |
 
-**Token opaco** é uma referência sem conteúdo: o resource server resolve chamando `/oauth2/introspect` — uma ida à rede por requisição, e revogação imediata.
-
-**JWT** é auto-contido: o resource server confere a assinatura localmente com a chave pública do `/oauth2/jwks` — nenhuma chamada, e **nenhuma revogação**.
-
-> Os TTLs não são arbitrários. Com JWT, **o tempo de vida é a janela de exposição de um token vazado**, porque não há como cancelá-lo. Daí 5 minutos.
+Os dois emitem **JWT**: o resource server confere a assinatura localmente com a chave pública do `/oauth2/jwks`, sem chamar ninguém — e **sem poder revogar**. É por isso que o TTL é curto: com JWT, o tempo de vida é a janela de exposição de um token vazado.
 
 E repare no escopo: o cliente do `ordering` só lê, porque o `ordering` só lê. **O escopo mais estreito que faz o trabalho é o certo.**
 
@@ -66,9 +75,9 @@ E repare no escopo: o cliente do `ordering` só lê, porque o `ordering` só lê
 | `POST /oauth2/revoke` | o client | cancelar um token |
 | `GET /oauth2/jwks` | o resource server | pegar as chaves públicas |
 | `GET /.well-known/oauth-authorization-server` | qualquer um | descobrir todos os outros |
-| `GET /oauth2/authorize` | o navegador | fluxo com usuário — **não utilizável hoje** |
+| `GET /oauth2/authorize` | o navegador | fluxo com usuário — login e consentimento |
 
-O último está no contrato mas nenhum cliente tem `authorization_code`, e não há usuário cadastrado.
+O `/oauth2/authorize` passou a ser utilizável na Fase 23, com o client `algashop-ecommerce-web` e o usuário `customer@gmail.com`.
 
 Contrato completo em [`openapi/authorization-server.yml`](https://github.com/gabriel-lima258/algashop-docs/blob/main/openapi/authorization-server.yml).
 
@@ -111,17 +120,41 @@ curl -s http://localhost:9000/oauth2/jwks
 
 ---
 
-## O que isto ainda não protege
+## O estado, e por que ele existe
 
-**Nada** — e vale dizer com essa clareza. Emitir token não protege recurso enquanto ninguém exigir o token, e `ordering`, `billing` e `product-catalog` não têm uma linha de resource server. A ordem está certa (não dá para verificar o que não existe), mas o ciclo está aberto.
+Tokens e consentimentos vão para o Postgres (`JdbcOAuth2AuthorizationService` e `JdbcOAuth2AuthorizationConsentService`), com schema versionado por Flyway.
 
-Outras pendências conhecidas: segredos em `{noop}` num arquivo versionado; clientes em memória; `production-env` vazio, o que faz o servidor subir sem cliente nenhum; e a chave de assinatura não persistida — sem configuração, o Spring gera um par novo a cada subida e **reiniciar invalida todo JWT emitido**.
+A razão não é escala: **consentimento é uma decisão do usuário**, e uma decisão que some no deploy nunca foi uma decisão. Junto vem o refresh token, que representa a sessão da pessoa — em memória, cada reinício deslogaria todo mundo.
+
+```bash
+# o banco precisa existir antes: ele entra pelo etc/postgres/init-user-db.sh do meta,
+# que só roda quando o volume do Postgres está vazio
+psql -h localhost -p 5433 -U postgres -c "CREATE DATABASE authorization_server;"
+```
+
+> As migrations são **cópias fiéis** do schema da biblioteca — a aplicação as lê por `RowMapper`, e mudar uma coluna quebra em runtime. E migration aplicada não se edita, nem para acrescentar comentário: o checksum muda e o Flyway recusa subir.
+
+Detalhes do fluxo, do consentimento e da rotação em [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-code-e-consentimento.md).
+
+---
+
+## Pendências conhecidas
+
+- **PKCE desligado** no client web, apesar de o OAuth 2.1 exigi-lo.
+- **Tokens em texto puro no banco** — quem lê a tabela se passa por qualquer usuário.
+- **`logging.level.org.springframework.security: TRACE`** registra credenciais e tokens.
+- **Um único usuário, em memória, com senha no YAML** — placeholder até existir um `UserDetailsService`.
+- **Segredos `{noop}`** num arquivo versionado, e **clientes em memória**.
+- **`docker-env` e `production-env` vazios** — sem datasource, o servidor nem sobe nesses perfis.
+- **Chave de assinatura não persistida** — cada reinício invalida todo JWT emitido.
+- **Não há tela de revogação de consentimento** — só apagando a linha no banco.
 
 ---
 
 ## Documentação
 
 - [Identidade e fundamentos do OAuth 2](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/fundamentos-identidade-oauth2.md) — senha × certificado × token, os quatro papéis, grants e escopo
+- [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-code-e-consentimento.md) — o fluxo com pessoa, consentimento e refresh
 - [Authorization Server](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-server.md) — a configuração deste serviço, opaco × JWT e quem guarda as chaves
 - [Arquitetura](https://github.com/gabriel-lima258/algashop-docs/blob/main/00-visao-geral/arquitetura.md) — onde este serviço entra no mapa
 
