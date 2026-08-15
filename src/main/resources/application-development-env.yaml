@@ -6,12 +6,15 @@
 
 # - client_credentials: fluxo de maquina para maquina. Nao ha usuario
 # - client-authentication-methods: Como o cliente prova quem e: client_secret_basic manda client-id e segredo no header
-# - client_secret: O prefixo {noop} e do PasswordEncoder: significa "sem hash, texto puro".
+# - client_secret: O prefixo {noop} e do PasswordEncoderConfig: significa "sem hash, texto puro".
 # Em producao seria {bcrypt} e viria de fora do arquivo.
 # - scopes: sao o teto do que este token pode fazer - e nada alem disso. Este
 # cliente e o de teste manual, entao carrega leitura e escrita.
 
 spring:
+  session: # configuração de sessão de usuários via db
+    store-type: jdbc
+    timeout: 30m
   datasource:
     url: jdbc:postgresql://localhost:5433/authorization_server
     username: postgres
@@ -25,15 +28,6 @@ spring:
     password: postgres
     url: jdbc:postgresql://localhost:5433/authorization_server
   security:
-    # Usuario unico e em memoria, so para o fluxo com pessoa existir. O authorization_code
-    # precisa de alguem para autenticar, e ainda nao ha cadastro de usuario nenhum - este
-    # e o placeholder ate haver um UserDetailsService de verdade.
-    #
-    # A senha vai em texto puro: o Boot prefixa {noop} sozinho quando o valor nao traz
-    # algoritmo. Serve para estudar e nao sobrevive a nada alem disso.
-    user:
-      name: customer@gmail.com
-      password: secret123
     oauth2:
       authorizationserver:
         issuer: http://algashop-authorization-server:9000 # validando url de acesso entre auth -> resource server
@@ -83,12 +77,7 @@ spring:
               access-token-time-to-live: 5m
               access-token-format: self-contained # JWT, validado localmente pela chave publica
           # O CLIENT WEB - o primeiro do projeto com usuario de verdade no fluxo.
-          #
-          # A diferenca para os dois de cima nao e de configuracao, e de pergunta: os
-          # anteriores respondem "este SERVICO pode ler produto"; este responde "esta
-          # PESSOA autorizou este aplicativo a agir por ela". Por isso ele tem tela de
-          # login, tela de consentimento, e refresh token.
-          algashop-ecommerce-web-client: # client web, exige autenticação de usuário
+          algashop-ecommerce-web-client:
             registration:
               client-id: algashop-ecommerce-web
               client_secret: "{noop}ecommerce123"
@@ -100,6 +89,9 @@ spring:
                 - client_secret_basic
               redirect-uris:
                 - http://algashop-ecommerce:9080/login/oauth2/code/algashop-ecommerce-web
+                - https://oauth.pstmn.io/v1/callback # permite logar via navegador no postman
+              post-logout-redirect-uris:
+                - http://algashop-ecommerce:9080?logout-success
               scopes:
                 - credit-cards:read
                 - credit-cards:write
@@ -109,14 +101,8 @@ spring:
                 - customers:write
                 - shopping-carts:read
                 - shopping-carts:write
-            # Faz o servidor perguntar ao usuario, em tela, o que ele libera - e gravar a
-            # resposta. Sem isto o consentimento e implicito: autenticou, autorizou tudo.
+                - openid # consentimento de identificação de open id
             require-authorization-consent: true
-            # PKCE DESLIGADO. O OAuth 2.1 o tornou obrigatorio para authorization_code,
-            # inclusive em client confidencial - e o documento de fundamentos deste
-            # projeto afirma isso. Fica assim por enquanto porque simplifica o teste
-            # manual (nao e preciso gerar code_verifier/code_challenge na mao); esta
-            # registrado como pendencia, nao como decisao final.
             require-proof-key: false
             token:
               # Tres prazos, tres papeis diferentes:

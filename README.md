@@ -22,7 +22,7 @@ Concentrar a emissão num serviço significa que o segredo mora num lugar só, q
 | **Spring Boot** | 4.0.3 |
 | **Protocolo** | OAuth 2.1 (Spring Authorization Server) |
 | **Porta** | 9000 |
-| **Banco** | PostgreSQL — tokens e consentimentos (clientes seguem em YAML) |
+| **Banco** | PostgreSQL — usuários, tokens, consentimentos e sessões (clientes seguem em YAML) |
 | **Pacote raiz** | `com.algaworks.algashop.authorizationserver` |
 
 ```gradle
@@ -76,6 +76,9 @@ E repare no escopo: o cliente do `ordering` só lê, porque o `ordering` só lê
 | `GET /oauth2/jwks` | o resource server | pegar as chaves públicas |
 | `GET /.well-known/oauth-authorization-server` | qualquer um | descobrir todos os outros |
 | `GET /oauth2/authorize` | o navegador | fluxo com usuário — login e consentimento |
+| `GET /userinfo` | o client | claims de identidade do usuário autenticado |
+| `GET /connect/logout` | o navegador | RP-initiated logout — encerra a sessão e **revoga** as autorizações |
+| `GET /.well-known/openid-configuration` | qualquer um | descoberta OIDC |
 
 O `/oauth2/authorize` passou a ser utilizável na Fase 23, com o client `algashop-ecommerce-web` e o usuário `customer@gmail.com`.
 
@@ -120,9 +123,39 @@ curl -s http://localhost:9000/oauth2/jwks
 
 ---
 
+## Usuários e identidade (OIDC)
+
+Desde a Fase 24 o servidor tem usuários de verdade, na tabela `auth_user`, e emite **ID token** além do access token.
+
+| E-mail | Tipo | Senha (`123456`) guardada como |
+|---|---|---|
+| `john.doe@email.com` | `CUSTOMER` | `{noop}` |
+| `victoria.garcia@algashop.com` | `MANAGER` | `{noop}` |
+| `jeff.roman@algashop.com` | `OPERATOR` | **`{bcrypt}`** |
+
+Os dois formatos convivem pelo `DelegatingPasswordEncoder` — o prefixo é o que permite trocar de algoritmo sem invalidar as senhas já gravadas.
+
+**Os dois tokens têm públicos diferentes:** o *access token* vai para as APIs e carrega `scope`; o *ID token* vai para o client que pediu o login e carrega `name`, `email`, `type`. Mandar ID token para a API é o erro clássico do OIDC.
+
+```bash
+# fluxo completo: login em /login, consentir em /oauth2/authorize, trocar o code
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:9000/userinfo
+
+# logout: encerra a sessão E revoga as autorizações do usuário
+curl -s -G --data-urlencode "id_token_hint=$ID_TOKEN" \
+     --data-urlencode "post_logout_redirect_uri=http://algashop-ecommerce:9080?logout-success" \
+     http://localhost:9000/connect/logout
+```
+
+> ⚠️ O logout **não** invalida um access token já emitido nas APIs: elas validam a assinatura localmente e o aceitam até o `exp`. Os 5 minutos de TTL são a janela.
+
+Detalhes em [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/openid-connect-e-sessao.md).
+
+---
+
 ## O estado, e por que ele existe
 
-Tokens e consentimentos vão para o Postgres (`JdbcOAuth2AuthorizationService` e `JdbcOAuth2AuthorizationConsentService`), com schema versionado por Flyway.
+Tokens, consentimentos e **sessões** vão para o Postgres (`JdbcOAuth2AuthorizationService`, `JdbcOAuth2AuthorizationConsentService` e `@EnableJdbcHttpSession`), com schema versionado por Flyway.
 
 A razão não é escala: **consentimento é uma decisão do usuário**, e uma decisão que some no deploy nunca foi uma decisão. Junto vem o refresh token, que representa a sessão da pessoa — em memória, cada reinício deslogaria todo mundo.
 
@@ -148,6 +181,9 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 - **`docker-env` e `production-env` vazios** — sem datasource, o servidor nem sobe nesses perfis.
 - **Chave de assinatura não persistida** — cada reinício invalida todo JWT emitido.
 - **Não há tela de revogação de consentimento** — só apagando a linha no banco.
+- **`@EnableJpaAuditing` não está ligado** — a classe base promete auditoria e nada preenche os campos; há um NPE latente para usuário criado pela aplicação.
+- **O logout é global por usuário**, revogando autorizações de todos os clients.
+- **Não há cadastro nem troca de senha** pela aplicação — o `AuthUser` é anêmico porque ainda não há operação sobre ele.
 
 ---
 
@@ -155,6 +191,7 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 
 - [Identidade e fundamentos do OAuth 2](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/fundamentos-identidade-oauth2.md) — senha × certificado × token, os quatro papéis, grants e escopo
 - [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-code-e-consentimento.md) — o fluxo com pessoa, consentimento e refresh
+- [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/openid-connect-e-sessao.md) — ID token, usuários no banco, `/userinfo` e logout
 - [Authorization Server](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-server.md) — a configuração deste serviço, opaco × JWT e quem guarda as chaves
 - [Arquitetura](https://github.com/gabriel-lima258/algashop-docs/blob/main/00-visao-geral/arquitetura.md) — onde este serviço entra no mapa
 
