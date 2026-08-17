@@ -1,7 +1,7 @@
 package com.algaworks.algashop.authorizationserver.infrastructure.security.userinfo;
 
-import com.algaworks.algashop.authorizationserver.domain.AuthUser;
-import com.algaworks.algashop.authorizationserver.domain.AuthUserRepository;
+import com.algaworks.algashop.authorizationserver.domain.user.AuthUser;
+import com.algaworks.algashop.authorizationserver.domain.user.AuthUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;

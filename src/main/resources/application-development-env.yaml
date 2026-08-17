@@ -57,6 +57,8 @@ spring:
                 - shopping-carts:read
                 - shopping-carts:write
                 - shipping-costs:preview
+                - users:read
+                - users:write
             token:
               access-token-time-to-live: 15m # tempo de expiração token
               # Era 'reference' (opaco) e virou JWT na Fase 21: os resource servers foram
@@ -101,6 +103,8 @@ spring:
                 - customers:write
                 - shopping-carts:read
                 - shopping-carts:write
+                - users:read
+                - users:write
                 - openid # consentimento de identificação de open id
             require-authorization-consent: true
             require-proof-key: false

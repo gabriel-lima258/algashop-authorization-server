@@ -1,6 +1,6 @@
 # algashop-authorization-server
 
-Quem **emite** as credenciais do AlgaShop. O único serviço sem domínio de negócio — sem entidade e com pouquíssimo código, mas com banco: tokens e consentimentos precisam sobreviver a um deploy.
+Quem **emite** as credenciais do AlgaShop — e, desde a Fase 25, quem administra os usuários que elas identificam. Começou sem domínio de negócio nenhum; hoje tem agregado, API e o banco que tokens, consentimentos e sessões exigem.
 
 ---
 
@@ -81,6 +81,33 @@ E repare no escopo: o cliente do `ordering` só lê, porque o `ordering` só lê
 | `GET /.well-known/openid-configuration` | qualquer um | descoberta OIDC |
 
 O `/oauth2/authorize` passou a ser utilizável na Fase 23, com o client `algashop-ecommerce-web` e o usuário `customer@gmail.com`.
+
+### API de usuários (Fase 25)
+
+Endpoints que **não são de protocolo**: domínio próprio deste serviço, protegido como qualquer resource server.
+
+| Endpoint | Escopo | Para quê |
+|---|---|---|
+| `GET /api/v1/users` | `users:read` | listar — filtro por nome, e-mail (parcial, case-insensitive) e tipo, paginado |
+| `GET /api/v1/users/{id}` | `users:read` | um usuário |
+| `POST /api/v1/users` | `users:write` | cadastrar |
+| `PUT /api/v1/users/{id}` | `users:write` | atualizar nome, tipo e `enabled` |
+| `DELETE /api/v1/users/{id}` | `users:write` | **anonimizar** — a linha permanece |
+| `GET /api/v1/users/me` | *(exige ser pessoa)* | o próprio perfil, resolvido pelo `sub` do token |
+
+O `/me` é o único que não pede escopo: ele exige que o token represente **uma pessoa**. Token de `client_credentials` leva **403** — não por falta de permissão, mas por ausência de sujeito.
+
+```bash
+curl -s -H "Authorization: Bearer $USER_TOKEN" http://localhost:9000/api/v1/users/me
+# {"id":"019d7764-…","name":"Victoria Garcia","email":"victoria.garcia@algashop.com","type":"MANAGER","enabled":true}
+
+curl -s -G -H "Authorization: Bearer $TOKEN" http://localhost:9000/api/v1/users \
+  --data-urlencode "email=ALGASHOP.COM" -d type=OPERATOR -d size=1 -d page=0
+```
+
+O `DELETE` não apaga: troca nome e e-mail por valores neutros e desliga a conta. A linha precisa sobreviver porque o id dela pode estar gravado como autor em qualquer registro auditado de qualquer serviço.
+
+> ⚠️ **A senha temporária do cadastro não é entregue.** `POST /users` gera 12 caracteres, imprime no **stdout** e grava só o hash — não há e-mail nem retorno no corpo. O usuário criado pela API **não consegue logar**.
 
 Contrato completo em [`openapi/authorization-server.yml`](https://github.com/gabriel-lima258/algashop-docs/blob/main/openapi/authorization-server.yml).
 
@@ -176,14 +203,15 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 - **PKCE desligado** no client web, apesar de o OAuth 2.1 exigi-lo.
 - **Tokens em texto puro no banco** — quem lê a tabela se passa por qualquer usuário.
 - **`logging.level.org.springframework.security: TRACE`** registra credenciais e tokens.
-- **Um único usuário, em memória, com senha no YAML** — placeholder até existir um `UserDetailsService`.
+- **Senha temporária vaza e não chega a ninguém** — `System.out.println` no cadastro, e nenhum canal de entrega. Sem isso, o usuário criado pela API não loga.
 - **Segredos `{noop}`** num arquivo versionado, e **clientes em memória**.
 - **`docker-env` e `production-env` vazios** — sem datasource, o servidor nem sobe nesses perfis.
 - **Chave de assinatura não persistida** — cada reinício invalida todo JWT emitido.
 - **Não há tela de revogação de consentimento** — só apagando a linha no banco.
-- **`@EnableJpaAuditing` não está ligado** — a classe base promete auditoria e nada preenche os campos; há um NPE latente para usuário criado pela aplicação.
 - **O logout é global por usuário**, revogando autorizações de todos os clients.
-- **Não há cadastro nem troca de senha** pela aplicação — o `AuthUser` é anêmico porque ainda não há operação sobre ele.
+- **Não há troca de senha** pela aplicação (o cadastro e a anonimização chegaram na Fase 25).
+- **"Máquina ou pessoa?" é heurística** — deduzido comparando `aud` e `sub`, não afirmado por um claim.
+- **Sem `AuthorizationMatrixTest`** — os outros três serviços têm; aqui o `@WebMvcTest` arrastaria a filter chain do protocolo inteira.
 
 ---
 
@@ -192,6 +220,7 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 - [Identidade e fundamentos do OAuth 2](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/fundamentos-identidade-oauth2.md) — senha × certificado × token, os quatro papéis, grants e escopo
 - [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-code-e-consentimento.md) — o fluxo com pessoa, consentimento e refresh
 - [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/openid-connect-e-sessao.md) — ID token, usuários no banco, `/userinfo` e logout
+- [Gestão de usuários e auditoria](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/gestao-de-usuarios-e-auditoria.md) — a API de usuários, `/me`, token de pessoa × de máquina e a auditoria com autor real
 - [Authorization Server](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-server.md) — a configuração deste serviço, opaco × JWT e quem guarda as chaves
 - [Arquitetura](https://github.com/gabriel-lima258/algashop-docs/blob/main/00-visao-geral/arquitetura.md) — onde este serviço entra no mapa
 

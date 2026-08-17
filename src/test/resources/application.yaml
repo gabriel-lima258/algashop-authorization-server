@@ -12,5 +12,4 @@ spring:
     group:
       test:
         - base
-        - development-env
         - test-env

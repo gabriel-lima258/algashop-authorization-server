@@ -1,16 +1,38 @@
 # Conexao NAO se declara aqui: o @ServiceConnection do TestContainerPostgresSQLConfig
-# injeta url, usuario e senha do container efemero.
+# injeta url, usuario e senha do container efemero. Qualquer spring.datasource.* fixo
+# seria sobreposto por ele e so confundiria o leitor.
 #
-# As tres linhas abaixo existem para DESFAZER o que o development-env declara. O Flyway
-# do Spring Boot usa spring.flyway.url quando ela existe, e so cai no datasource quando
-# nao existe - e o development-env aponta para localhost:5433/authorization_server, o
-# banco de DESENVOLVIMENTO. Sem anular aqui, rodar a suite migraria o banco real: os
-# testes usariam o Postgres do container e o Flyway mexeria em outro lugar.
+# As tres linhas vazias de flyway (url/user/password) existem para DESFAZER o que o
+# development-env declara. O Flyway do Spring Boot usa spring.flyway.url quando ela
+# existe, e so cai no datasource quando nao existe - e o development-env aponta para
+# localhost:5433/authorization_server, o banco de DESENVOLVIMENTO. Sem anular aqui,
+# rodar a suite migraria o banco real: os testes usariam o Postgres do container e o
+# Flyway mexeria em outro lugar.
 #
 # Anular com valor vazio (nao com "" nem com uma url falsa) e o que faz o Boot tratar a
 # propriedade como ausente e o Flyway herdar o datasource do container.
+#
+# O locations tambem e sobrescrito, pelo mesmo motivo de isolamento: o development-env
+# inclui classpath:db/testdata, cujo afterMigrate.sql insere 3 usuarios de seed. O
+# Flyway roda FORA da transacao do teste, entao o rollback do @Transactional nao desfaz
+# o seed - e os ITs de listagem/paginacao contariam usuarios que nao criaram. A troca
+# por db/clean segue o padrao do ordering: o afterMigrate de la e substituido por um
+# TRUNCATE CASCADE, e o banco de teste nasce limpo.
+# Ver src/test/resources/db/clean/afterMigrate.sql
 spring:
+  application:
+    name: authorization_server
+  datasource:
+    url: jdbc:postgresql://localhost:5433/authorization_server_test
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: 'true'
   flyway:
-    url:
-    user:
-    password:
+    enabled: true
+    locations: classpath:db/migration
+    user: postgres
+    password: postgres
+    url: jdbc:postgresql://localhost:5433/authorization_server_test

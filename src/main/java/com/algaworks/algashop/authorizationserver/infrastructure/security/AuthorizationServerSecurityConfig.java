@@ -7,9 +7,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.authorization.oidc.web.authentication.OidcLogoutAuthenticationSuccessHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
@@ -25,14 +27,17 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
  *    /userinfo, /.well-known/...) — tratados pela chain de Order(1), com as regras do
  *    Spring Authorization Server.
  *
- * 2. Demais requisições da aplicação (ex.: a própria página de login) — tratadas pela
- *    chain de Order(2), com autenticação via formulário.
+ * 2. Aplica segurança de endpoints de usuarios dentro de "/api/*" e libera somente o actuator
+ *
+ * 3. Demais requisições da aplicação (ex.: a própria página de login) — tratadas pela
+ *    chain de Order(3), com autenticação via formulário.
  *
  * A ordem importa: o Spring avalia as chains na sequência de @Order e usa a primeira cujo
  * securityMatcher casar com a requisição; a chain do protocolo precisa vir antes da default.
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class AuthorizationServerSecurityConfig {
 
@@ -78,16 +83,32 @@ public class AuthorizationServerSecurityConfig {
         return http.build();
     }
 
+    // configuração de filtro de resources de authorization server
+    @Bean
+    @Order(2)
+    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
+        http.securityMatcher("/api/**")
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health/**").permitAll()
+                        .anyRequest().authenticated())
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+
+        return http.build();
+    }
+
     /**
      * Chain default para todas as requisições que não são do protocolo OAuth2/OIDC.
      *
-     * - anyRequest().authenticated(): toda a aplicação exige usuário autenticado.
+     * - anyRequest().authenticated(): toda a aplicação exige usuário autenticado em outros resources.
      * - formLogin(withDefaults()): habilita o login por formulário do Spring Security
      *   (gera a página /login), que autentica o usuário na sessão — é para cá que a
      *   chain de Order(1) redireciona antes de continuar o fluxo de autorização.
      */
     @Bean
-    @Order(2)
+    @Order(3)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) {
         http.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .formLogin(Customizer.withDefaults());

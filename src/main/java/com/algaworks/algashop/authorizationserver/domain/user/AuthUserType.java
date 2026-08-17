@@ -1,4 +1,4 @@
-package com.algaworks.algashop.authorizationserver.domain;
+package com.algaworks.algashop.authorizationserver.domain.user;
 
 public enum AuthUserType {
     MANAGER,

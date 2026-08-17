@@ -6,3 +6,23 @@ server.port: 9000
 spring:
   application:
     name: authorization-server
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+
+management:
+  info:
+    env.enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+info:
+  app.name: AlgaShop Authorization Server
