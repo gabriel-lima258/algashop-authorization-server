@@ -1,0 +1,17 @@
+# Perfil ativado pelo grupo 'docker' (ver application.yaml): base + development-env + docker-env.
+# Como development-env vem antes, aqui so muda o que tem endereco diferente dentro da rede
+# do compose - clientes, issuer, TTLs e sessao continuam herdados de la.
+#
+# A PORTA E 5432, NAO 5433. A 5433 e a porta PUBLICADA no host (ports: 5433:5432 no
+# docker-compose.tools.yml); dentro da rede do compose o Postgres escuta na 5432 de sempre.
+# Publicar porta nao muda a porta do servico - so cria um atalho pela maquina de fora.
+spring:
+  datasource:
+    url: jdbc:postgresql://algashop-postgres:5432/authorization_server
+  jpa:
+    show-sql: true
+  flyway:
+    locations: classpath:db/migration
+    user: postgres
+    password: postgres
+    url: jdbc:postgresql://algashop-postgres:5432/authorization_server

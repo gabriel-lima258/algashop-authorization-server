@@ -1,4 +1,4 @@
-package com.algaworks.algashop.authorizationserver.infrastructure.security;
+package com.algaworks.algashop.authorizationserver.infrastructure.security.session;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.session.jdbc.config.annotation.web.http.EnableJdbcHttpSession;

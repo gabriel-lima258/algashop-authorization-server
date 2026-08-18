@@ -36,3 +36,25 @@ spring:
     user: postgres
     password: postgres
     url: jdbc:postgresql://localhost:5433/authorization_server_test
+
+# O AlgaShopSecurityProperties e @Validated com @NotNull em cors, csp e cookie, e essas
+# propriedades so existem no development-env - que o grupo de perfis 'test' nao carrega.
+# Como CorsConfig e CookieConfig sao @Configuration component-scaneados, eles entram no
+# contexto de teste e exigem o bean: sem as linhas abaixo, TODO teste que sobe contexto
+# morre na validacao, longe da causa.
+#
+# Os valores sao de teste e nao precisam corresponder a ambiente nenhum - o que importa
+# e que existam. Declara-los aqui (em vez de dar default na classe) preserva o que a
+# validacao existe para fazer: quebrar cedo quando alguem esquecer de configurar CORS
+# ou CSP num ambiente de verdade.
+algashop:
+  security:
+    cors:
+      allowedOrigins:
+        - http://localhost:4200
+    cookie:
+      secure: false
+      sameSite: Lax
+      domainName: localhost
+    csp:
+      policyDirectives: "frame-ancestors 'self'"

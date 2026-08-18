@@ -43,6 +43,7 @@ public class AuthorizationServerSecurityConfig {
 
     private final OidcUserInfoMapper oidcUserInfoMapper;
     private final OidcLogoutAuthenticationSuccessHandler oidcLogoutAuthenticationSuccessHandler;
+    private final AlgaShopSecurityProperties properties;
 
     /**
      * Chain exclusiva dos endpoints do protocolo OAuth2/OIDC.
@@ -59,6 +60,7 @@ public class AuthorizationServerSecurityConfig {
      *   chega via navegador (requisição que aceita HTML, ex.: /oauth2/authorize no fluxo
      *   authorization_code), redireciona para /login em vez de responder 401 — clients de API
      *   (JSON) continuam recebendo o erro padrão.
+     *   headers permite o carregamento de iframes
      */
     @Bean
     @Order(1)
@@ -66,6 +68,11 @@ public class AuthorizationServerSecurityConfig {
         var authorizationServer = new OAuth2AuthorizationServerConfigurer();
 
         http.securityMatcher(authorizationServer.getEndpointsMatcher())
+                .cors(Customizer.withDefaults())
+                .headers(headers -> {
+                    var csp = properties.getCsp();
+                    headers.contentSecurityPolicy(c -> c.policyDirectives(csp.getPolicyDirectives()));
+                })
                 .with(authorizationServer, configurer -> {
                     configurer.oidc(oidc -> oidc
                             .logoutEndpoint(logout -> logout.logoutResponseHandler(oidcLogoutAuthenticationSuccessHandler))
@@ -92,7 +99,7 @@ public class AuthorizationServerSecurityConfig {
                         .requestMatchers("/actuator/health/**").permitAll()
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.disable())
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 

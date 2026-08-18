@@ -35,7 +35,7 @@ Uma dependência e uma `@SpringBootApplication` vazia produzem **seis endpoints*
 
 ---
 
-## Os quatro clientes
+## Os cinco clientes
 
 Todos em `application-development-env.yaml`, divididos por **quem está no fluxo**.
 
@@ -63,6 +63,41 @@ O primeiro é o único do projeto com **pessoa** no fluxo: tela de login, tela d
 Os dois emitem **JWT**: o resource server confere a assinatura localmente com a chave pública do `/oauth2/jwks`, sem chamar ninguém — e **sem poder revogar**. É por isso que o TTL é curto: com JWT, o tempo de vida é a janela de exposição de um token vazado.
 
 E repare no escopo: o cliente do `ordering` só lê, porque o `ordering` só lê. **O escopo mais estreito que faz o trabalho é o certo.**
+
+### Sem segredo — `algashop-admin-web` (Fase 26)
+
+O primeiro cliente **público** do projeto: uma SPA de administração, que roda inteira no navegador.
+
+| | |
+|---|---|
+| Grant | `authorization_code` — **e só ele** |
+| Autenticação do cliente | **`none`** — não tem segredo para apresentar |
+| PKCE | **obrigatório** (`require-proof-key: true`) |
+| Consentimento | não (cliente próprio, não de terceiro) |
+| Refresh token | **não existe** |
+| TTLs | access 5m · código **2m** |
+
+Um segredo embutido em bundle JavaScript está a um *view-source* de distância — não é segredo, é string. No lugar dele, **PKCE**: o cliente sorteia um `code_verifier` por requisição, manda `SHA256(verifier)` no `/authorize` e o verifier original no `/token`. O servidor recalcula e compara.
+
+```bash
+# challenge e verifier
+V=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
+C=$(printf %s "$V" | openssl dgst -binary -sha256 | openssl base64 | tr '+/' '-_' | tr -d '=')
+
+# ...login no navegador, /oauth2/authorize com code_challenge=$C ...
+
+# a troca NAO leva client_secret nenhum
+curl -s -X POST http://auth.algashop.local:9000/oauth2/token \
+  -d grant_type=authorization_code -d client_id=algashop-admin-web \
+  -d code=$CODE -d redirect_uri=http://admin.algashop.local:4200 \
+  -d code_verifier=$V
+```
+
+Sem `refresh_token`, a renovação é **silent refresh**: um iframe escondido chama `/oauth2/authorize?prompt=none`, o cookie de sessão vai junto, e o servidor devolve um código novo sem mostrar tela.
+
+> ⚠️ Sem sessão, `prompt=none` **redireciona para `/login`** em vez de devolver `login_required` — o `/oauth2/authorize` exige autenticação na filter chain e o endpoint nunca é alcançado. Dentro do iframe, a SPA fica em silêncio. Registrado como pendência.
+
+Detalhes em [PKCE e clientes públicos](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/pkce-e-clientes-publicos.md).
 
 ---
 
@@ -115,11 +150,23 @@ Contrato completo em [`openapi/authorization-server.yml`](https://github.com/gab
 
 ## Como rodar
 
-Não está no `docker-compose` — sobe direto:
+Direto, com o Postgres do compose de pé:
 
 ```bash
 ./gradlew bootRun
 ```
+
+Ou dentro do compose (o serviço entrou no `docker-compose.services.yml`):
+
+```bash
+./gradlew bootJar
+docker build -t algashop/authorization-server:dev .
+docker compose up -d          # na raiz do meta
+```
+
+> O issuer é **`http://auth.algashop.local:9000`**, e ele viaja dentro do claim `iss` de todo token. Dentro da rede do compose quem responde por esse nome é o `hostname:` do container; **na sua máquina** ele precisa estar no `/etc/hosts` — junto com `algashop.local` e `admin.algashop.local`, que a lista de `etc/hostnames/hostnames` traz. Sem eles, o navegador não abre `/login` e nada que rode por `bootRun` valida token.
+>
+> Os três ficam sob o mesmo domínio-pai de propósito: o cookie de sessão sai com `Domain=algashop.local`, e é isso que permite ao iframe do silent refresh chegar autenticado.
 
 Token opaco:
 
@@ -200,12 +247,14 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 
 ## Pendências conhecidas
 
-- **PKCE desligado** no client web, apesar de o OAuth 2.1 exigi-lo.
+- **PKCE desligado no client confidencial** (`algashop-ecommerce-web`) — o `algashop-admin-web` já o usa; o OAuth 2.1 exige dos dois.
+- **`prompt=none` sem sessão vai para `/login`** em vez de `login_required`, e o iframe do silent refresh fica esperando em silêncio.
+- **`secure: false` no cookie de sessão** e `http://` nas redirect URIs — aceitável só em desenvolvimento.
 - **Tokens em texto puro no banco** — quem lê a tabela se passa por qualquer usuário.
 - **`logging.level.org.springframework.security: TRACE`** registra credenciais e tokens.
 - **Senha temporária vaza e não chega a ninguém** — `System.out.println` no cadastro, e nenhum canal de entrega. Sem isso, o usuário criado pela API não loga.
 - **Segredos `{noop}`** num arquivo versionado, e **clientes em memória**.
-- **`docker-env` e `production-env` vazios** — sem datasource, o servidor nem sobe nesses perfis.
+- **`production-env` vazio** — sem datasource e sem clientes (o grupo `production` não herda `development-env`), o servidor não sobe nesse perfil. O `docker-env` deixou de ser vazio: o serviço entrou no `docker-compose.services.yml` e aponta para `algashop-postgres:5432`.
 - **Chave de assinatura não persistida** — cada reinício invalida todo JWT emitido.
 - **Não há tela de revogação de consentimento** — só apagando a linha no banco.
 - **O logout é global por usuário**, revogando autorizações de todos os clients.

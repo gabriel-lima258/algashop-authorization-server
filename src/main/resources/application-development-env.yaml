@@ -30,7 +30,7 @@ spring:
   security:
     oauth2:
       authorizationserver:
-        issuer: http://algashop-authorization-server:9000 # validando url de acesso entre auth -> resource server
+        issuer: http://auth.algashop.local:9000 # validando url de acesso entre auth -> resource server
         client:
           algashop-test-client:
             registration:
@@ -90,10 +90,10 @@ spring:
               client-authentication-methods:
                 - client_secret_basic
               redirect-uris:
-                - http://algashop-ecommerce:9080/login/oauth2/code/algashop-ecommerce-web
+                - http://algashop.local:9080/login/oauth2/code/algashop-ecommerce-web
                 - https://oauth.pstmn.io/v1/callback # permite logar via navegador no postman
               post-logout-redirect-uris:
-                - http://algashop-ecommerce:9080?logout-success
+                - http://algashop.local:9080?logout-success
               scopes:
                 - credit-cards:read
                 - credit-cards:write
@@ -142,10 +142,50 @@ spring:
                 - customers:write
             token:
               access-token-time-to-live: 15m
+          algashop-admin-web-client:
+            registration:
+              client-id: algashop-admin-web
+              client-name: AlgaShop Admin
+              authorization-grant-types:
+                - authorization_code
+              client-authentication-methods:
+                - none # Client público sem autenticação, precisa do pkce
+              redirect-uris:
+                - http://admin.algashop.local:4200
+                - http://admin.algashop.local:4200/silent-refresh.html
+              post-logout-redirect-uris:
+                - http://admin.algashop.local:4200
+              scopes:
+                - products:read
+                - products:write
+                - products:stock:write
+                - categories:read
+                - categories:write
+                - invoices:read
+                - orders:read
+                - customers:read
+                - shopping-carts:read
+                - users:read
+                - users:write
+                - openid
+            require-authorization-consent: false
+            require-proof-key: true #PKCE
+            token:
+              access-token-time-to-live: 5m
+              authorization-code-time-to-live: 2m
 
-# TRACE no Spring Security registra o passo a passo da autenticacao - inclusive
-# credenciais e tokens. E o melhor jeito de entender o fluxo, e nao pode chegar a
-# ambiente nenhum alem deste.
+algashop:
+  security:
+    cors:
+      allowedOrigins:
+        - http://admin.algashop.local:4200
+    cookie:
+      secure: false # HTTPS em prod deve ser true
+      sameSite: Lax # None, Lax, Strict -> permite que o cookie seja acessado por outros subdomains
+      domainName: algashop.local
+    csp: # side refresh pelo client
+      policyDirectives: frame-ancestors 'self' http://admin.algashop.local:4200 http://auth.algashop.local:9000
+
 logging:
   level:
     org.springframework.security: TRACE
