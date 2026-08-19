@@ -101,6 +101,40 @@ Detalhes em [PKCE e clientes públicos](https://github.com/gabriel-lima258/algas
 
 ---
 
+## Controle de acesso por papel (RBAC — Fase 27)
+
+O `AuthUserType` deixou de ser informativo: ele viaja como claim `role` no access token e vira `ROLE_*` nos quatro serviços. Duas tabelas decidem o que cada papel alcança:
+
+| Tabela | Responde |
+|---|---|
+| `auth_user_type_client_allowed` | *este papel pode **abrir** este client?* |
+| `auth_user_type_client_scope` | *abrindo, quais escopos pode **levar**?* |
+
+As duas são consultadas **no `/oauth2/authorize`**, antes de qualquer código ser emitido — quem não pode não recebe token, e token assinado não se revoga.
+
+```
+CUSTOMER  -> admin-web      : access_denied   "not allowed to authorize this client"
+MANAGER   -> ecommerce-web  : access_denied
+OPERATOR  pedindo users:write no admin-web : invalid_scope [users:write]
+MANAGER   pedindo o mesmo                  : code emitido
+```
+
+E a matriz de negócio sobre usuários:
+
+| | MANAGER | OPERATOR | CUSTOMER | máquina |
+|---|---|---|---|---|
+| Criar MANAGER/OPERATOR | ✅ | ❌ | ❌ | ❌ |
+| Criar CUSTOMER | ❌ | ❌ | ❌ | ✅ |
+| Editar o próprio registro | ✅ | ✅ | ✅ | ❌ |
+| Editar outro | ✅ *(≠ CUSTOMER)* | ❌ | ❌ | ❌ |
+| Promover/rebaixar | ✅ *(MANAGER ↔ OPERATOR)* | ❌ | ❌ | ❌ |
+
+> ⚠️ **As duas tabelas se preenchem em conjunto.** Um papel listado em `allowed` sem nenhuma linha em `scope` autentica e recebe `invalid_scope` em tudo — "entra e não faz nada". Aconteceu com o `CUSTOMER` na loja.
+
+Fluxo completo em [RBAC e controle de acesso](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/rbac-e-controle-de-acesso.md).
+
+---
+
 ## Endpoints
 
 | Endpoint | Quem chama | Para quê |
@@ -269,6 +303,7 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 - [Identidade e fundamentos do OAuth 2](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/fundamentos-identidade-oauth2.md) — senha × certificado × token, os quatro papéis, grants e escopo
 - [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-code-e-consentimento.md) — o fluxo com pessoa, consentimento e refresh
 - [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/openid-connect-e-sessao.md) — ID token, usuários no banco, `/userinfo` e logout
+- [RBAC e controle de acesso](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/rbac-e-controle-de-acesso.md) — papel no token, política de client e escopo, e o fluxo guiado das quatro camadas
 - [Gestão de usuários e auditoria](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/gestao-de-usuarios-e-auditoria.md) — a API de usuários, `/me`, token de pessoa × de máquina e a auditoria com autor real
 - [Authorization Server](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-server.md) — a configuração deste serviço, opaco × JWT e quem guarda as chaves
 - [Arquitetura](https://github.com/gabriel-lima258/algashop-docs/blob/main/00-visao-geral/arquitetura.md) — onde este serviço entra no mapa
