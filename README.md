@@ -101,6 +101,30 @@ Detalhes em [PKCE e clientes públicos](https://github.com/gabriel-lima258/algas
 
 ---
 
+## As telas (Fase 28)
+
+O servidor deixou de usar a tela padrão do Spring Security. Três páginas próprias em **Thymeleaf**, com CSS e logo do projeto:
+
+| Rota | Página | Pública? |
+|---|---|---|
+| `GET /login` | formulário de login | ✅ |
+| `GET /logout` | confirmação (o `POST` é quem encerra) | exige sessão |
+| `GET /oauth2/consent` | consentimento, com escopo em linguagem de gente | exige sessão |
+| `GET /` | redireciona para a loja | exige sessão |
+| `/css/**`, `/img/**`, `/favicon.ico` | estáticos | ✅ |
+
+```gradle
+implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+```
+
+O que sustenta o login são quatro strings que **nenhum compilador verifica**: os campos `username` e `password`, o destino `POST /login`, e o `_csrf` — este último não escrito por nós, e sim injetado pelo Thymeleaf em formulários com `th:action`. Trocar por `action` devolve 403 em todo login. Há uma suíte (`LoginPageIT`) que lê o HTML servido justamente para travar isso.
+
+> ⚠️ **A recuperação de senha ainda não existe.** `forgot-password.html`, `password-form.html` e `password-message.html` estão versionados sem rota, e `/forgot-password` — que está liberado no filter chain e linkado na tela de login — responde **404**. Implementação prevista para a próxima fase.
+
+Detalhes em [Telas e formulários de login](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/telas-e-formularios-de-login.md).
+
+---
+
 ## Controle de acesso por papel (RBAC — Fase 27)
 
 O `AuthUserType` deixou de ser informativo: ele viaja como claim `role` no access token e vira `ROLE_*` nos quatro serviços. Duas tabelas decidem o que cada papel alcança:
@@ -303,6 +327,7 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 - [Identidade e fundamentos do OAuth 2](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/fundamentos-identidade-oauth2.md) — senha × certificado × token, os quatro papéis, grants e escopo
 - [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-code-e-consentimento.md) — o fluxo com pessoa, consentimento e refresh
 - [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/openid-connect-e-sessao.md) — ID token, usuários no banco, `/userinfo` e logout
+- [Telas e formulários de login](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/telas-e-formularios-de-login.md) — o contrato invisível entre o HTML e o filtro, e a tela de consentimento própria
 - [RBAC e controle de acesso](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/rbac-e-controle-de-acesso.md) — papel no token, política de client e escopo, e o fluxo guiado das quatro camadas
 - [Gestão de usuários e auditoria](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/gestao-de-usuarios-e-auditoria.md) — a API de usuários, `/me`, token de pessoa × de máquina e a auditoria com autor real
 - [Authorization Server](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-server.md) — a configuração deste serviço, opaco × JWT e quem guarda as chaves

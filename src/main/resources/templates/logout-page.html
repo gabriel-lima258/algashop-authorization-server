@@ -1,0 +1,36 @@
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:tiles="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/main.css}" />
+    <title>AlgaShop - Logout</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+</head>
+
+<body>
+<div class="container">
+    <div class="wrapper">
+        <div class="title">
+            <div class="header-logo">
+                <a href="/" class="logo">
+                    <img src="/img/logo.png" alt="">
+                </a>
+            </div>
+        </div>
+        <form id="form" th:action="@{/logout}" method="post">
+            <div class="row">
+                <h3>You are been logged out...</h3>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    function logout() {
+        document.getElementById("form").submit();
+    }
+    const myTimeout = setTimeout(logout, 3000);
+</script>
+</body>
+
+</html>

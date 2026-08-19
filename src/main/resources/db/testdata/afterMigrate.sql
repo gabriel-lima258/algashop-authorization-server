@@ -44,13 +44,6 @@ INSERT INTO auth_user_type_client_scope (auth_user_type, client_id, scope) VALUE
 ('OPERATOR', 'algashop-admin-web', 'customers:read'),
 ('OPERATOR', 'algashop-admin-web', 'shopping-carts:read'),
 ('OPERATOR', 'algashop-admin-web', 'users:read'),
--- O CUSTOMER na loja. Sem estas linhas ele consta como permitido no
--- auth_user_type_client_allowed e mesmo assim leva invalid_scope em QUALQUER escopo que
--- peca - "pode entrar e nao pode fazer nada". As duas tabelas se preenchem em conjunto:
--- allowed responde "pode abrir?", scope responde "pode levar o que?".
--- Repare no que fica de fora: users:write. Editar o proprio cadastro passa por
--- canEditUser (que ja permite o proprio registro); dar o escopo de escrita de usuario a
--- um cliente da loja abriria superficie sem necessidade.
 ('CUSTOMER', 'algashop-ecommerce-web', 'openid'),
 ('CUSTOMER', 'algashop-ecommerce-web', 'orders:read'),
 ('CUSTOMER', 'algashop-ecommerce-web', 'orders:write'),

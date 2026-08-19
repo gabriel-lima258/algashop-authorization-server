@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/main.css}" />
+    <title>AlgaShop - Consent</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+    <script>
+        function cancelConsent() {
+            document.consent_form.reset();
+            document.consent_form.submit();
+        }
+    </script>
+</head>
+<body>
+<div class="container">
+    <div class="wrapper">
+        <div class="title">
+            <div class="header-logo">
+                <a href="/" class="logo">
+                    <img src="/img/logo.png" alt="AlgaShop">
+                </a>
+            </div>
+        </div>
+        <form name="consent_form" method="post" th:action="${requestURI}">
+            <input type="hidden" name="client_id" th:value="${clientId}">
+            <input type="hidden" name="state" th:value="${state}">
+            <input th:if="${userCode}" type="hidden" name="user_code" th:value="${userCode}">
+
+            <div class="info-text">
+                <h3 style="margin-bottom: 10px;">App Permissions</h3>
+                <p>
+                    The application <strong th:text="${clientId}"></strong>
+                    wants to access your account <strong th:text="${principalName}"></strong>
+                </p>
+            </div>
+
+            <div th:if="${userCode}" class="warning-box">
+                You have provided the code <strong th:text="${userCode}"></strong>.
+                Verify that this code matches what is shown on your device.
+            </div>
+
+            <div class="info-text">
+                The following permissions are requested by the above app.<br/>
+                Please review these and consent if you approve.
+            </div>
+
+            <div class="scopes-container">
+                <div th:each="scope: ${scopes}" class="scope-item">
+                    <input type="checkbox"
+                           name="scope"
+                           th:value="${scope.value}"
+                           th:id="${scope.value}">
+                    <label th:for="${scope.value}" th:text="${scope.value}"></label>
+                    <p class="text-primary" th:text="${scope.description}"></p>
+                </div>
+
+                <div th:if="${not #lists.isEmpty(previouslyApprovedScopes)}">
+                    <p style="font-weight: 600; margin-top: 20px; margin-bottom: 10px;">
+                        You have already granted the following permissions to the above app:
+                    </p>
+                    <div th:each="scope: ${previouslyApprovedScopes}" class="scope-item">
+                        <input type="checkbox"
+                               th:id="${scope.value}"
+                               disabled
+                               checked>
+                        <label th:for="${scope.value}" th:text="${scope.value}"></label>
+                        <p class="text-primary" th:text="${scope.description}"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="button submit-btn" type="submit" id="submit-consent">
+                    Submit Consent
+                </button>
+                <button class="button cancel-btn" type="button" id="cancel-consent" onclick="cancelConsent();">
+                    Cancel
+                </button>
+            </div>
+
+            <div class="footer-text">
+                <small>
+                    Your consent to provide access is required.<br/>
+                    If you do not approve, click Cancel, in which case no information will be shared with the app.
+                </small>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

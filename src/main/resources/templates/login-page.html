@@ -1,0 +1,39 @@
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:tiles="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/main.css}"/>
+    <title>AlgaShop - Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css"/>
+</head>
+<body>
+<div class="container">
+    <div class="wrapper">
+        <div class="title">
+            <div class="header-logo">
+                <a href="/" class="logo">
+                    <img src="/img/logo.png" alt="">
+                </a>
+            </div>
+        </div>
+        <form th:action="@{/login}" method="post">
+            <div th:if="${param.error}" class="row">
+                <p class="alert">Email or password are invalid!</p>
+            </div>
+            <div class="row">
+                <i class="fas fa-user"></i>
+                <input type="text" name="username" placeholder="Email" required>
+            </div>
+            <div class="row">
+                <i class="fas fa-lock"></i>
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <div class="link"><a th:href="@{/forgot-password}">Forgot password?</a></div>
+            <div class="row button">
+                <input type="submit" value="Login">
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

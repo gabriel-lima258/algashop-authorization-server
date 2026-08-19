@@ -49,6 +49,10 @@ spring:
 # ou CSP num ambiente de verdade.
 algashop:
   security:
+    # Quinta vez que uma propriedade obrigatoria nova no development-env derruba o perfil de
+    # teste (fases 19, 21, 22, 26, 28). O valor aqui e irrelevante - so precisa existir, e o
+    # @NotBlank existe justamente para quebrar cedo quem esquecer de configura-la a serio.
+    defaultRedirectUri: http://localhost:9080
     cors:
       allowedOrigins:
         - http://localhost:4200

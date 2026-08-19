@@ -85,7 +85,8 @@ public class AuthorizationServerSecurityConfig {
                             .logoutEndpoint(logout -> logout.logoutResponseHandler(oidcLogoutAuthenticationSuccessHandler))
                             .userInfoEndpoint(userInfo -> userInfo.userInfoMapper(oidcUserInfoMapper)))
                             .authorizationEndpoint(endpoint ->
-                                    endpoint.authenticationProviders(this::customizeAuthenticationProviders));
+                                    endpoint.authenticationProviders(this::customizeAuthenticationProviders)
+                                            .consentPage("/oauth2/consent"));
                 })
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .exceptionHandling(
@@ -126,15 +127,19 @@ public class AuthorizationServerSecurityConfig {
      * Chain default para todas as requisições que não são do protocolo OAuth2/OIDC.
      *
      * - anyRequest().authenticated(): toda a aplicação exige usuário autenticado em outros resources.
-     * - formLogin(withDefaults()): habilita o login por formulário do Spring Security
-     *   (gera a página /login), que autentica o usuário na sessão — é para cá que a
+     * - form login personalizado, desabilita o login default do spring, liberando o acesso de recursos estaticos
      *   chain de Order(1) redireciona antes de continuar o fluxo de autorização.
      */
     @Bean
     @Order(3)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) {
-        http.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
-                .formLogin(Customizer.withDefaults());
+        http.authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/login", "/forgot-password",
+                                "/css/**", "/js/**", "/img/**", "/favicon.ico").permitAll()
+                        .anyRequest().authenticated())
+                .formLogin(form -> form.loginPage("/login")
+                        .defaultSuccessUrl(properties.getDefaultRedirectUri())
+                        .permitAll());
         return http.build();
     }
 }
