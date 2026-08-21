@@ -20,6 +20,12 @@
 # TRUNCATE CASCADE, e o banco de teste nasce limpo.
 # Ver src/test/resources/db/clean/afterMigrate.sql
 spring:
+  # Sem spring.mail.host o MailSenderAutoConfiguration nao entra e nao existe JavaMailSender -
+  # e o AuthUserMailSenderImpl (Fase 30) nao consegue ser construido, derrubando o contexto.
+  # Aponta para uma porta que nao responde: nenhum teste envia e-mail, so precisa do bean.
+  mail:
+    host: localhost
+    port: 1025
   application:
     name: authorization_server
   datasource:
@@ -48,6 +54,15 @@ spring:
 # validacao existe para fazer: quebrar cedo quando alguem esquecer de configurar CORS
 # ou CSP num ambiente de verdade.
 algashop:
+  # Sexta vez que uma propriedade obrigatoria nova no development-env derruba o perfil de
+  # teste (fases 19, 21, 22, 26, 28, 30). Os valores nao precisam ser reais - so existir.
+  user-account:
+    token:
+      activation-ttl: PT24H
+      password-reset-ttl: PT2H
+    mail:
+      from: AlgaShop <no-reply@algashop.test>
+      password-change-url: http://localhost:9000/change-password
   security:
     # Quinta vez que uma propriedade obrigatoria nova no development-env derruba o perfil de
     # teste (fases 19, 21, 22, 26, 28). O valor aqui e irrelevante - so precisa existir, e o

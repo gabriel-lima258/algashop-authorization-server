@@ -12,6 +12,9 @@
 # cliente e o de teste manual, entao carrega leitura e escrita.
 
 spring:
+  mail:
+    host: localhost
+    port: 1025
   session: # configuração de sessão de usuários via db
     store-type: jdbc
     timeout: 30m
@@ -176,6 +179,13 @@ spring:
               authorization-code-time-to-live: 2m
 
 algashop:
+  user-account:
+    token:
+      activation-ttl: PT24H # tempo de expiration email token
+      password-reset-ttl: PT2H # tempo de expiration password reset token
+    mail:
+      from: AlgaShop <no-reply@algashop.com> # remetente
+      password-change-url: http://auth.algashop.local:9000/change-password # url de troca de senha
   security:
     defaultRedirectUri: http://algashop.local:9080 # uri padrão após login
     cors:

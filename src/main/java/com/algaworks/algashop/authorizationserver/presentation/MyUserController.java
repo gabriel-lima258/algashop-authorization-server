@@ -1,10 +1,12 @@
 package com.algaworks.algashop.authorizationserver.presentation;
 
 import com.algaworks.algashop.authorizationserver.application.security.SecurityCheckApplicationService;
+import com.algaworks.algashop.authorizationserver.application.user.management.PasswordManagementApplicationService;
 import com.algaworks.algashop.authorizationserver.application.user.query.AuthUserOutput;
 import com.algaworks.algashop.authorizationserver.application.user.query.AuthUserQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,11 +34,18 @@ public class MyUserController {
 
     private final SecurityCheckApplicationService securityCheck;
     private final AuthUserQueryService queryService;
+    private final PasswordManagementApplicationService passwordManagementApplicationService;
 
     @GetMapping
     @CanAccessOwnProfile
     public AuthUserOutput getMe() {
         UUID authenticatedUserId = securityCheck.getAuthenticatedUserId();
         return queryService.findById(authenticatedUserId);
+    }
+
+    @PostMapping("/password-change")
+    @CanAccessOwnProfile
+    public void requestPasswordChange() {
+        passwordManagementApplicationService.requestPasswordChange(securityCheck.getAuthenticatedUserId());
     }
 }

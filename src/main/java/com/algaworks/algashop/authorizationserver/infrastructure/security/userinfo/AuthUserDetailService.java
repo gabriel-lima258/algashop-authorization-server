@@ -24,7 +24,7 @@ public class AuthUserDetailService implements UserDetailsService {
 
         return User.withUsername(email)
                 .password(user.getPassword())
-                .disabled(!user.isEnabled())
+                .disabled(user.isDisabled()) // não pode efetuar login
                 .build();
     }
 }

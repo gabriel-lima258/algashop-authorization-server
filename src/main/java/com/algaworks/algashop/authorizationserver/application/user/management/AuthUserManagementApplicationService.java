@@ -1,14 +1,16 @@
 package com.algaworks.algashop.authorizationserver.application.user.management;
 
 import com.algaworks.algashop.authorizationserver.application.security.SecurityCheckApplicationService;
+import com.algaworks.algashop.authorizationserver.application.user.UserAccountProperties;
+import com.algaworks.algashop.authorizationserver.application.user.mail.AuthUserMailSender;
 import com.algaworks.algashop.authorizationserver.application.user.query.AuthUserNotFoundException;
 import com.algaworks.algashop.authorizationserver.application.user.query.AuthUserOutput;
 import com.algaworks.algashop.authorizationserver.domain.user.AuthUser;
+import com.algaworks.algashop.authorizationserver.domain.user.AuthUserPasswordManager;
 import com.algaworks.algashop.authorizationserver.domain.user.AuthUserRepository;
+import com.algaworks.algashop.authorizationserver.domain.user.VerificationTokenHasher;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,8 +22,12 @@ import java.util.UUID;
 public class AuthUserManagementApplicationService {
 
     private final AuthUserRepository authUserRepository;
-    private final PasswordEncoder passwordEncoder;
     private final SecurityCheckApplicationService securityCheck;
+    private final AuthUserPasswordManager passwordManager;
+    private final VerificationTokenHasher tokenHasher;
+    private final UserAccountProperties properties;
+
+    private final AuthUserMailSender emailSender;
 
     public AuthUserOutput create(AuthUserInput input) {
         if (!securityCheck.canRegisterUserOfType(input.getType())) {
@@ -32,16 +38,18 @@ public class AuthUserManagementApplicationService {
             throw new AuthUserEmailAlreadyInUseException(input.getEmail());
         }
 
-        String tempPassword = RandomStringUtils.secure().nextAlphabetic(12);
-        System.out.println(tempPassword);
-        String passwordHash = passwordEncoder.encode(tempPassword);
-
         AuthUser user = AuthUser.brandNew(
                 input.getEmail(),
                 input.getName(),
                 input.getType(),
-                passwordHash
+                passwordManager
         );
+
+        // o usuario ativa o fluxo de geração de token de verificação
+        String plainHasher = user.generateVerificationToken(properties.getToken().getActivationTtl(), tokenHasher);
+
+        // envia email com token
+        emailSender.sendActivationEmail(user, plainHasher);
 
         return AuthUserOutput.from(authUserRepository.save(user));
     }

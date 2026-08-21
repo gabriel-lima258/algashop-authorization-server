@@ -12,6 +12,8 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.RequestCacheConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationProvider;
@@ -107,9 +109,22 @@ public class AuthorizationServerSecurityConfig {
                 .forEach(provider -> provider.setAuthenticationValidator(delegatingRequestValidator));
     }
 
-    // configuração de filtro de resources de authorization server
+    // filter chain de recursos públicos, ex: para evitar sessões antigas onde não deveria
     @Bean
     @Order(2)
+    public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) {
+        http.securityMatcher("/change-password",  "/forgot-password")
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .requestCache(RequestCacheConfigurer::disable)
+                .anonymous(AbstractHttpConfigurer::disable);
+
+        return http.build();
+    }
+
+    // configuração de filtro de resources de authorization server
+    @Bean
+    @Order(3)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
         http.securityMatcher("/api/**")
                 .authorizeHttpRequests(auth -> auth
@@ -131,15 +146,16 @@ public class AuthorizationServerSecurityConfig {
      *   chain de Order(1) redireciona antes de continuar o fluxo de autorização.
      */
     @Bean
-    @Order(3)
+    @Order(4)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) {
         http.authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/login", "/forgot-password",
+                        .requestMatchers("/login",
                                 "/css/**", "/js/**", "/img/**", "/favicon.ico").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form.loginPage("/login")
                         .defaultSuccessUrl(properties.getDefaultRedirectUri())
                         .permitAll());
+
         return http.build();
     }
 }

@@ -52,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({TestContainerPostgresSQLConfig.class, TestSecurityConfig.class})
 class LoginPageIT {
 
-    private static final String PASSWORD = "test123";
+    private static final String PASSWORD = AuthUserTestDataBuilder.PLAIN_PASSWORD;
 
     @Autowired
     private MockMvc mockMvc;

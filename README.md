@@ -119,9 +119,32 @@ implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 
 O que sustenta o login são quatro strings que **nenhum compilador verifica**: os campos `username` e `password`, o destino `POST /login`, e o `_csrf` — este último não escrito por nós, e sim injetado pelo Thymeleaf em formulários com `th:action`. Trocar por `action` devolve 403 em todo login. Há uma suíte (`LoginPageIT`) que lê o HTML servido justamente para travar isso.
 
-> ⚠️ **A recuperação de senha ainda não existe.** `forgot-password.html`, `password-form.html` e `password-message.html` estão versionados sem rota, e `/forgot-password` — que está liberado no filter chain e linkado na tela de login — responde **404**. Implementação prevista para a próxima fase.
-
 Detalhes em [Telas e formulários de login](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/telas-e-formularios-de-login.md).
+
+### Verificação de e-mail e troca de senha (Fase 30)
+
+O cadastro deixou de gerar uma senha que ninguém recebe. Agora ele gera um **token de verificação**, manda um link por e-mail, e a senha é definida pelo próprio usuário.
+
+```
+POST /api/v1/users        -> e-mail de ativação    (token 24h)
+POST /forgot-password     -> e-mail de recuperação (token 2h)
+GET/POST /change-password -> define a senha, verifica o e-mail e CONSOME o token
+```
+
+**Os dois caminhos terminam no mesmo método do agregado** — ativar a conta é trocar a senha pela primeira vez.
+
+| | |
+|---|---|
+| O que viaja no e-mail | o token em **texto puro** |
+| O que fica no banco | o **SHA-256** dele, em Base64 URL-safe |
+| Uso | **único** — usar o link apaga o token |
+| Login antes de ativar | **recusado** (`AuthUser.isDisabled()`) |
+
+Em desenvolvimento os e-mails vão para o **Mailpit** (`docker-compose.tools.yml`): SMTP em 1025, caixa de entrada em <http://localhost:8025>.
+
+> As três formas de o token estar errado — inexistente, já usado, expirado — respondem **igual**. E o `/forgot-password` responde igual para e-mail cadastrado e não cadastrado, para não virar um oráculo de quem tem conta.
+
+Detalhes em [Verificação de e-mail e troca de senha](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/verificacao-de-email-e-troca-de-senha.md).
 
 ---
 
@@ -310,7 +333,9 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 - **`secure: false` no cookie de sessão** e `http://` nas redirect URIs — aceitável só em desenvolvimento.
 - **Tokens em texto puro no banco** — quem lê a tabela se passa por qualquer usuário.
 - **`logging.level.org.springframework.security: TRACE`** registra credenciais e tokens.
-- **Senha temporária vaza e não chega a ninguém** — `System.out.println` no cadastro, e nenhum canal de entrega. Sem isso, o usuário criado pela API não loga.
+- **O e-mail é enviado antes do commit** — `@Async` dentro de `@Transactional`: o link pode chegar antes de o token existir no banco.
+- **Sem limite de pedidos de troca de senha** — `POST /forgot-password` pode ser repetido à vontade.
+- **A senha nova não tem regra nenhuma** — sem tamanho mínimo nem validação.
 - **Segredos `{noop}`** num arquivo versionado, e **clientes em memória**.
 - **`production-env` vazio** — sem datasource e sem clientes (o grupo `production` não herda `development-env`), o servidor não sobe nesse perfil. O `docker-env` deixou de ser vazio: o serviço entrou no `docker-compose.services.yml` e aponta para `algashop-postgres:5432`.
 - **Chave de assinatura não persistida** — cada reinício invalida todo JWT emitido.
@@ -327,6 +352,7 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 - [Identidade e fundamentos do OAuth 2](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/fundamentos-identidade-oauth2.md) — senha × certificado × token, os quatro papéis, grants e escopo
 - [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-code-e-consentimento.md) — o fluxo com pessoa, consentimento e refresh
 - [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/openid-connect-e-sessao.md) — ID token, usuários no banco, `/userinfo` e logout
+- [Verificação de e-mail e troca de senha](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/verificacao-de-email-e-troca-de-senha.md) — token com hash em banco, ativação e recuperação como o mesmo fluxo
 - [Telas e formulários de login](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/telas-e-formularios-de-login.md) — o contrato invisível entre o HTML e o filtro, e a tela de consentimento própria
 - [RBAC e controle de acesso](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/rbac-e-controle-de-acesso.md) — papel no token, política de client e escopo, e o fluxo guiado das quatro camadas
 - [Gestão de usuários e auditoria](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/gestao-de-usuarios-e-auditoria.md) — a API de usuários, `/me`, token de pessoa × de máquina e a auditoria com autor real
