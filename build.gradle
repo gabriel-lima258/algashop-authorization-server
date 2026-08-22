@@ -75,6 +75,10 @@ dependencyManagement {
 
 contracts {
 	packageWithBaseClasses = "com.algaworks.algashop.authorizationserver.contract.base"
+	// a convencao derivaria "MyuserBase" da pasta myuser; o mapping preserva o nome MyUserBase
+	baseClassMappings {
+		baseClassMapping("myuser", "com.algaworks.algashop.authorizationserver.contract.base.MyUserBase")
+	}
 }
 
 // Três suítes separadas, uma por tipo de teste:

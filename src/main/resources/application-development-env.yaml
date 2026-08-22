@@ -106,9 +106,7 @@ spring:
                 - customers:write
                 - shopping-carts:read
                 - shopping-carts:write
-                - users:read
-                - users:write
-                - openid # consentimento de identificação de open id
+                - openid
             require-authorization-consent: true
             require-proof-key: false
             token:
@@ -142,7 +140,8 @@ spring:
               scopes: # granulização de scopes (permissão de acesso ao sistema)
                 - products:read
                 - categories:read
-                - customers:write
+                - users:write
+                - shipping-costs:preview
             token:
               access-token-time-to-live: 15m
           algashop-admin-web-client:

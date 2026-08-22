@@ -21,6 +21,8 @@ public class AuthUserUpdateInput {
     @NotNull
     private AuthUserType type;
 
+    // Boolean (nao primitivo) para o @NotNull ter efeito: com boolean, um PUT sem o
+    // campo virava enabled=false e desabilitava o usuario em silencio
     @NotNull
-    private boolean enabled;
+    private Boolean enabled;
 }

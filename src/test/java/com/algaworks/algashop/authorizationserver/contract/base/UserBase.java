@@ -123,7 +123,7 @@ public class UserBase {
                             .name(input.getName())
                             .email("john.manager@algashop.com")
                             .type(input.getType())
-                            .enabled(input.isEnabled())
+                            .enabled(input.getEnabled())
                             .build();
                 });
     }

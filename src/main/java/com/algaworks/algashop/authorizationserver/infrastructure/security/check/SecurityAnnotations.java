@@ -11,17 +11,21 @@ public class SecurityAnnotations {
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('SCOPE_users:read')")
+    @PreAuthorize("hasAuthority('SCOPE_users:read') and not hasRole('CUSTOMER')")
     public @interface CanReadUsers {}
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('SCOPE_users:write')")
+    @PreAuthorize("hasAuthority('SCOPE_users:write') and not hasRole('CUSTOMER')")
     public @interface CanWriteUsers {}
 
-    // acessamos a classe OAuth2SecurityCheckApplicationServiceImpl e pegamos o metodo canAccessOwnProfile
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
     @PreAuthorize("@securityCheck.canAccessOwnProfile()")
     public @interface CanAccessOwnProfile {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("@securityCheck.canAccessOwnProfile() and hasRole('CUSTOMER')")
+    public @interface CanDeleteOwnProfile {}
 }

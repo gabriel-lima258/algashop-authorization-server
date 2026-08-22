@@ -1,14 +1,14 @@
 package com.algaworks.algashop.authorizationserver.presentation;
 
 import com.algaworks.algashop.authorizationserver.application.security.SecurityCheckApplicationService;
-import com.algaworks.algashop.authorizationserver.application.user.management.PasswordManagementApplicationService;
+import com.algaworks.algashop.authorizationserver.application.user.management.*;
 import com.algaworks.algashop.authorizationserver.application.user.query.AuthUserOutput;
 import com.algaworks.algashop.authorizationserver.application.user.query.AuthUserQueryService;
+import com.algaworks.algashop.authorizationserver.infrastructure.security.check.SecurityAnnotations;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
@@ -34,18 +34,32 @@ public class MyUserController {
 
     private final SecurityCheckApplicationService securityCheck;
     private final AuthUserQueryService queryService;
+    private final AuthUserManagementApplicationService userManagementApplicationService;
     private final PasswordManagementApplicationService passwordManagementApplicationService;
 
     @GetMapping
     @CanAccessOwnProfile
     public AuthUserOutput getMe() {
-        UUID authenticatedUserId = securityCheck.getAuthenticatedUserId();
-        return queryService.findById(authenticatedUserId);
+        UUID userId = securityCheck.getAuthenticatedUserId();
+        return queryService.findById(userId);
     }
 
     @PostMapping("/password-change")
     @CanAccessOwnProfile
     public void requestPasswordChange() {
         passwordManagementApplicationService.requestPasswordChange(securityCheck.getAuthenticatedUserId());
+    }
+
+    @PutMapping
+    @CanAccessOwnProfile
+    public AuthUserOutput updateMe(@RequestBody @Valid MyUserUpdateInput input) {
+        return userManagementApplicationService.update(securityCheck.getAuthenticatedUserId(), input);
+    }
+
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @CanDeleteOwnProfile
+    public void deleteMe() {
+        userManagementApplicationService.anonymize(securityCheck.getAuthenticatedUserId());
     }
 }
