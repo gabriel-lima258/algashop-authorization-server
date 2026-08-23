@@ -126,9 +126,9 @@ public class AuthorizationServerSecurityConfig {
     @Bean
     @Order(3)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
-        http.securityMatcher("/api/**")
+        http.securityMatcher("/api/**", "/actuator/**")
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())

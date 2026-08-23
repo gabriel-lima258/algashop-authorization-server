@@ -6,6 +6,10 @@
 # docker-compose.tools.yml); dentro da rede do compose o Postgres escuta na 5432 de sempre.
 # Publicar porta nao muda a porta do servico - so cria um atalho pela maquina de fora.
 spring:
+  mail:
+    # dentro da rede do compose, localhost e o proprio container; o mailpit atende
+    # pelo nome do servico
+    host: algashop-mailpit
   datasource:
     url: jdbc:postgresql://algashop-postgres:5432/authorization_server
   jpa:
