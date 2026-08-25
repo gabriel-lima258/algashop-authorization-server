@@ -128,7 +128,7 @@ public class AuthorizationServerSecurityConfig {
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
         http.securityMatcher("/api/**", "/actuator/**")
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/actuator/**", "/actuator/info/**").permitAll()
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())

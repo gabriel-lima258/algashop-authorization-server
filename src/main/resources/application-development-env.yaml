@@ -209,6 +209,9 @@ algashop:
 logging:
   level:
     org.springframework.security: ${auth.params.logging.security-level}
+    com.netflix.discovery.DiscoveryClient: OFF # desativa error eureka em dev
+    com.netflix.discovery: OFF
+    com.netflix.eureka: OFF
 
 management:
   info:
@@ -222,3 +225,13 @@ management:
       show-details: always
     env:
       show-values: always
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${shared.params.service-registry-url}/eureka
+    healthcheck:
+      enabled: true # habilita o health em eureka para status de serviço dentro de eureka
+  instance:
+    instanceId: ${random.uuid} # cada instancia replicada ganha um id unico
+    prefer-ip-address: true # configura rede alcançável via docker
