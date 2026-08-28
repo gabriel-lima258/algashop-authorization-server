@@ -53,6 +53,7 @@ INSERT INTO auth_user_type_client_scope (auth_user_type, client_id, scope) VALUE
 ('CUSTOMER', 'algashop-ecommerce-web', 'shopping-carts:write'),
 ('CUSTOMER', 'algashop-ecommerce-web', 'credit-cards:read'),
 ('CUSTOMER', 'algashop-ecommerce-web', 'credit-cards:write'),
+('CUSTOMER', 'algashop-ecommerce-web', 'invoices:read'),
 ('CUSTOMER', 'algashop-ecommerce-web', 'users:read');
 
 

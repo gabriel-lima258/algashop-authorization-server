@@ -120,8 +120,9 @@ spring:
                 - customers:write
                 - shopping-carts:read
                 - shopping-carts:write
+                - invoices:read
                 - openid
-            require-authorization-consent: true
+            require-authorization-consent: false # desativa o consent já que é um client nosso
             require-proof-key: false
             token:
               # Tres prazos, tres papeis diferentes:

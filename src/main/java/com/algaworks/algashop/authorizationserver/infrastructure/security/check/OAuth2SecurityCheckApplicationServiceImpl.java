@@ -165,6 +165,11 @@ public class OAuth2SecurityCheckApplicationServiceImpl implements SecurityCheckA
         return false;
     }
 
+    @Override
+    public boolean canViewUser(AuthUserType viewType, UUID viewUserId) {
+        return canEditUser(viewType, viewUserId);
+    }
+
     /**
      * Quais transicoes de papel sao permitidas.
      *

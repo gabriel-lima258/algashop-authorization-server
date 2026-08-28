@@ -15,7 +15,10 @@ spring:
   jpa:
     show-sql: true
   flyway:
-    locations: classpath:db/migration
+    # db/testdata precisa estar aqui tambem: e onde vive o afterMigrate.sql que faz o
+    # seed dos usuarios de teste e das tabelas de scope por papel. Sem ele, um ambiente
+    # docker do zero sobe sem nenhum usuario e as mudancas de seed nunca sao aplicadas.
+    locations: classpath:db/migration,classpath:db/testdata
     user: postgres
     password: postgres
     url: jdbc:postgresql://algashop-postgres:5432/authorization_server

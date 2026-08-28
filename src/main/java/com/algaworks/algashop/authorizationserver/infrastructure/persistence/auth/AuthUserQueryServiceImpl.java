@@ -1,5 +1,6 @@
 package com.algaworks.algashop.authorizationserver.infrastructure.persistence.auth;
 
+import com.algaworks.algashop.authorizationserver.application.security.SecurityCheckApplicationService;
 import com.algaworks.algashop.authorizationserver.application.user.query.AuthUserFilter;
 import com.algaworks.algashop.authorizationserver.application.user.query.AuthUserNotFoundException;
 import com.algaworks.algashop.authorizationserver.application.user.query.AuthUserOutput;
@@ -7,6 +8,7 @@ import com.algaworks.algashop.authorizationserver.application.user.query.AuthUse
 import com.algaworks.algashop.authorizationserver.application.util.PageModel;
 import com.algaworks.algashop.authorizationserver.domain.user.AuthUser;
 import com.algaworks.algashop.authorizationserver.domain.user.AuthUserRepository;
+import com.algaworks.algashop.authorizationserver.domain.user.AuthUserType;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
@@ -14,11 +16,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -29,9 +33,19 @@ public class AuthUserQueryServiceImpl implements AuthUserQueryService {
     private final AuthUserRepository authUserRepository;
     private final EntityManager entityManager;
 
+    private final SecurityCheckApplicationService securityCheck;
+
     @Override
     public AuthUserOutput findById(UUID userId) {
         return authUserRepository.findById(userId)
+                .flatMap(authUser -> {
+                    // nega quando NAO pode ver - canViewUser true significa permissao
+                    if (!securityCheck.canViewUser(authUser.getType(), authUser.getId())) {
+                        throw new AccessDeniedException("Cannot view user of type " + authUser.getType());
+                    }
+
+                    return Optional.of(authUser);
+                })
                 .map(AuthUserOutput::from)
                 .orElseThrow(() -> new AuthUserNotFoundException(userId));
     }
@@ -75,6 +89,9 @@ public class AuthUserQueryServiceImpl implements AuthUserQueryService {
         if (filter.getType() != null) {
             predicates.add(builder.equal(root.get("type"), filter.getType()));
         }
+
+        // remove o tipo customer na listagem de users
+        predicates.add(builder.not(builder.equal(root.get("type"), AuthUserType.CUSTOMER)));
 
         return predicates.toArray(new Predicate[]{});
     }
