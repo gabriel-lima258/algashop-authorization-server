@@ -97,7 +97,7 @@ Sem `refresh_token`, a renovação é **silent refresh**: um iframe escondido ch
 
 > ⚠️ Sem sessão, `prompt=none` **redireciona para `/login`** em vez de devolver `login_required` — o `/oauth2/authorize` exige autenticação na filter chain e o endpoint nunca é alcançado. Dentro do iframe, a SPA fica em silêncio. Registrado como pendência.
 
-Detalhes em [PKCE e clientes públicos](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/pkce-e-clientes-publicos.md).
+Detalhes em [PKCE e clientes públicos](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/10-pkce-e-clientes-publicos.md).
 
 ---
 
@@ -119,7 +119,7 @@ implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 
 O que sustenta o login são quatro strings que **nenhum compilador verifica**: os campos `username` e `password`, o destino `POST /login`, e o `_csrf` — este último não escrito por nós, e sim injetado pelo Thymeleaf em formulários com `th:action`. Trocar por `action` devolve 403 em todo login. Há uma suíte (`LoginPageIT`) que lê o HTML servido justamente para travar isso.
 
-Detalhes em [Telas e formulários de login](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/telas-e-formularios-de-login.md).
+Detalhes em [Telas e formulários de login](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/06-telas-e-formularios-de-login.md).
 
 ### Verificação de e-mail e troca de senha (Fase 30)
 
@@ -144,7 +144,7 @@ Em desenvolvimento os e-mails vão para o **Mailpit** (`docker-compose.tools.yml
 
 > As três formas de o token estar errado — inexistente, já usado, expirado — respondem **igual**. E o `/forgot-password` responde igual para e-mail cadastrado e não cadastrado, para não virar um oráculo de quem tem conta.
 
-Detalhes em [Verificação de e-mail e troca de senha](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/verificacao-de-email-e-troca-de-senha.md).
+Detalhes em [Verificação de e-mail e troca de senha](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/09-verificacao-de-email-e-troca-de-senha.md).
 
 ---
 
@@ -178,7 +178,7 @@ E a matriz de negócio sobre usuários:
 
 > ⚠️ **As duas tabelas se preenchem em conjunto.** Um papel listado em `allowed` sem nenhuma linha em `scope` autentica e recebe `invalid_scope` em tudo — "entra e não faz nada". Aconteceu com o `CUSTOMER` na loja.
 
-Fluxo completo em [RBAC e controle de acesso](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/rbac-e-controle-de-acesso.md).
+Fluxo completo em [RBAC e controle de acesso](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/11-rbac-e-controle-de-acesso.md).
 
 ---
 
@@ -304,7 +304,7 @@ curl -s -G --data-urlencode "id_token_hint=$ID_TOKEN" \
 
 > ⚠️ O logout **não** invalida um access token já emitido nas APIs: elas validam a assinatura localmente e o aceitam até o `exp`. Os 5 minutos de TTL são a janela.
 
-Detalhes em [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/openid-connect-e-sessao.md).
+Detalhes em [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/07-openid-connect-e-sessao.md).
 
 ---
 
@@ -322,7 +322,7 @@ psql -h localhost -p 5433 -U postgres -c "CREATE DATABASE authorization_server;"
 
 > As migrations são **cópias fiéis** do schema da biblioteca — a aplicação as lê por `RowMapper`, e mudar uma coluna quebra em runtime. E migration aplicada não se edita, nem para acrescentar comentário: o checksum muda e o Flyway recusa subir.
 
-Detalhes do fluxo, do consentimento e da rotação em [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-code-e-consentimento.md).
+Detalhes do fluxo, do consentimento e da rotação em [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/05-authorization-code-e-consentimento.md).
 
 ---
 
@@ -349,14 +349,14 @@ Detalhes do fluxo, do consentimento e da rotação em [Authorization code e cons
 
 ## Documentação
 
-- [Identidade e fundamentos do OAuth 2](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/fundamentos-identidade-oauth2.md) — senha × certificado × token, os quatro papéis, grants e escopo
-- [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-code-e-consentimento.md) — o fluxo com pessoa, consentimento e refresh
-- [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/openid-connect-e-sessao.md) — ID token, usuários no banco, `/userinfo` e logout
-- [Verificação de e-mail e troca de senha](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/verificacao-de-email-e-troca-de-senha.md) — token com hash em banco, ativação e recuperação como o mesmo fluxo
-- [Telas e formulários de login](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/telas-e-formularios-de-login.md) — o contrato invisível entre o HTML e o filtro, e a tela de consentimento própria
-- [RBAC e controle de acesso](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/rbac-e-controle-de-acesso.md) — papel no token, política de client e escopo, e o fluxo guiado das quatro camadas
-- [Gestão de usuários e auditoria](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/gestao-de-usuarios-e-auditoria.md) — a API de usuários, `/me`, token de pessoa × de máquina e a auditoria com autor real
-- [Authorization Server](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/authorization-server.md) — a configuração deste serviço, opaco × JWT e quem guarda as chaves
-- [Arquitetura](https://github.com/gabriel-lima258/algashop-docs/blob/main/00-visao-geral/arquitetura.md) — onde este serviço entra no mapa
+- [Identidade e fundamentos do OAuth 2](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/01-fundamentos-identidade-oauth2.md) — senha × certificado × token, os quatro papéis, grants e escopo
+- [Authorization code e consentimento](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/05-authorization-code-e-consentimento.md) — o fluxo com pessoa, consentimento e refresh
+- [OpenID Connect: identidade, sessão e logout](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/07-openid-connect-e-sessao.md) — ID token, usuários no banco, `/userinfo` e logout
+- [Verificação de e-mail e troca de senha](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/09-verificacao-de-email-e-troca-de-senha.md) — token com hash em banco, ativação e recuperação como o mesmo fluxo
+- [Telas e formulários de login](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/06-telas-e-formularios-de-login.md) — o contrato invisível entre o HTML e o filtro, e a tela de consentimento própria
+- [RBAC e controle de acesso](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/11-rbac-e-controle-de-acesso.md) — papel no token, política de client e escopo, e o fluxo guiado das quatro camadas
+- [Gestão de usuários e auditoria](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/08-gestao-de-usuarios-e-auditoria.md) — a API de usuários, `/me`, token de pessoa × de máquina e a auditoria com autor real
+- [Authorization Server](https://github.com/gabriel-lima258/algashop-docs/blob/main/05-seguranca/02-authorization-server.md) — a configuração deste serviço, opaco × JWT e quem guarda as chaves
+- [Arquitetura](https://github.com/gabriel-lima258/algashop-docs/blob/main/00-visao-geral/01-arquitetura.md) — onde este serviço entra no mapa
 
 O caderno completo está em [`algashop-docs`](https://github.com/gabriel-lima258/algashop-docs).
