@@ -187,7 +187,21 @@ spring:
             token:
               access-token-time-to-live: 5m
               authorization-code-time-to-live: 2m
-
+          algashop-notifications-service-client:
+            registration:
+              client-id: algashop-notifications-service
+              authorization-grant-types:
+                - client_credentials
+              client-authentication-methods:
+                - client_secret_basic
+              client_secret: ${auth.params.clients.algashop-notifications-service.secret}
+              scopes:
+                - emails:send
+                - email-templates:read
+                - email-templates:write
+            token:
+              access-token-time-to-live: 1h
+              access-token-format: self-contained # JWT
 algashop:
   user-account:
     token:
