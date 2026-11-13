@@ -34,6 +34,7 @@ INSERT INTO auth_user_type_client_scope (auth_user_type, client_id, scope) VALUE
 ('MANAGER', 'algashop-admin-web', 'shopping-carts:read'),
 ('MANAGER', 'algashop-admin-web', 'users:read'),
 ('MANAGER', 'algashop-admin-web', 'users:write'),
+('MANAGER', 'algashop-admin-web', 'metrics:read'),
 ('OPERATOR', 'algashop-admin-web', 'openid'),
 ('OPERATOR', 'algashop-admin-web', 'products:read'),
 ('OPERATOR', 'algashop-admin-web', 'products:write'),

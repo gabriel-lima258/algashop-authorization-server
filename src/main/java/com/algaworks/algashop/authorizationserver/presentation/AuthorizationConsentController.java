@@ -105,6 +105,7 @@ public class AuthorizationConsentController {
             scopeDescriptions.put("shopping-carts:write", "Create and modify shopping carts.");
             scopeDescriptions.put("users:read", "Read user information.");
             scopeDescriptions.put("users:write", "Create and modify users.");
+            scopeDescriptions.put("metrics:read", "Read sales and payment metrics.");
         }
 
         public final String value;
